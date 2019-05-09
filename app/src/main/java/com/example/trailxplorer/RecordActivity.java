@@ -7,13 +7,13 @@ import android.widget.TextView;
 
 public class RecordActivity extends AppCompatActivity {
 
-    double lat;
-    double lon;
+    double alt;
     String chronometer;
+    String distance;
 
-    TextView latitudeTxt;
-    TextView longitudeTxt;
+    TextView altitudeTxt;
     TextView chronoTxt;
+    TextView distanceTxt;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -21,18 +21,17 @@ public class RecordActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.record_main);
 
-        latitudeTxt = findViewById(R.id.record_latitude);
-        longitudeTxt = findViewById(R.id.record_longitude);
+        altitudeTxt = findViewById(R.id.record_max_altitude);
         chronoTxt = findViewById(R.id.record_chronometer);
+        distanceTxt = findViewById(R.id.distance);
 
         Intent i = getIntent();
-        lat = i.getDoubleExtra("Latitude", 0);
-        lon = i.getDoubleExtra("Longitude", 0);
+        alt = i.getDoubleExtra("Altitude", 0);
         chronometer = i.getStringExtra("Chronometer");
+        distance =  i.getStringExtra("Distance");
 
-        latitudeTxt.setText("Latitude: " + String.valueOf(lat));
-        longitudeTxt.setText("Longitude: " + String.valueOf(lon));
-        chronoTxt.setText("Timer: " + chronometer);
-
+        altitudeTxt.setText("Max Altitude: " + String.valueOf(alt));
+        chronoTxt.setText("Time taken: " + chronometer);
+        distanceTxt.setText("Distance travelled: " + distance);
     }
 }

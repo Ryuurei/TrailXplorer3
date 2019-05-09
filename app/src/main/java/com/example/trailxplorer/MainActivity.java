@@ -14,6 +14,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Chronometer;
 import android.widget.TextView;
@@ -55,13 +56,15 @@ public class MainActivity extends AppCompatActivity {
 
     Boolean permissionExternalStorage;
 
-    private ArrayList<TrackPoint> trackPoints = new ArrayList<>(); //Shouldn't have to use it
+    private ArrayList<Location> trackPoints = new ArrayList<>();
 
     String directoryName = "GPStracks";
     String fileName;
     GPXHelper gpxHelper;
     File dir;
     File file;
+    double totatDistance;
+    double altitude;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
                 else
                 {
                     gpxHelper.closeFile(file);
+                    totatDistance = getDistance(trackPoints);
                     intoRecordActivity();
                 }
             }
@@ -115,13 +119,40 @@ public class MainActivity extends AppCompatActivity {
         chronometer.stop();
         pauseOffset = SystemClock.elapsedRealtime() - chronometer.getBase();
         running = false;
+        String dst = String.valueOf(totatDistance);
+        String alt = String.valueOf(altitude);
         String chrono = (String) chronometer.getText();
         Intent intent = new Intent(this, RecordActivity.class);
-        intent.putExtra("Latitude", lat);
-        intent.putExtra("Longitude", lon);
+        intent.putExtra("Altitude", alt);
         intent.putExtra("Chronometer", chrono);
+        intent.putExtra("Distance", dst);
         startActivity(intent);
+    }
 
+    public double getDistance(ArrayList<Location> trackpoints)
+    {
+        double total = 0;
+        for(int i = 0; i < trackpoints.size() - 1; i++)
+        {
+            Location loc1 = trackpoints.get(i);
+            Location loc2 = trackpoints.get(i + 1);
+            total += distanceTwoPoints(loc1.getLatitude(), loc2.getLatitude(), loc1.getLongitude(), loc2.getLongitude());
+            altitude = Math.max(loc1.getAltitude(), loc2.getAltitude());
+        }
+        return total;
+    }
+
+    public double distanceTwoPoints(double lat1, double lat2, double lon1, double lon2)
+    {
+        double earthRadius = 3958.75;
+        double distanceLat = Math.toRadians(lat2 - lat1);
+        double distanceLon = Math.toRadians(lon2 - lon1);
+        double a = (Math.sin(distanceLat / 2) * Math.sin(distanceLat / 2))
+                + (Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * Math.sin(distanceLon / 2) * Math.sin(distanceLon / 2));
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        double distance = earthRadius * c;
+        double meterConversion = 1609;
+        return (int) (distance * meterConversion);
     }
 
     private void addLocationListener() {
@@ -147,6 +178,7 @@ public class MainActivity extends AppCompatActivity {
             public void onLocationChanged(Location location) {
                 if(running)
                 {
+                    trackPoints.add(location);
                     gpxHelper.writeInFile(file, location);
                     lat = location.getLatitude();
                     lon = location.getLongitude();
@@ -179,6 +211,7 @@ public class MainActivity extends AppCompatActivity {
                     {
                         if(running)
                         {
+                            trackPoints.add(l);
                             gpxHelper.writeInFile(file, l);
                             lat = l.getLatitude();
                             lon = l.getLongitude();
