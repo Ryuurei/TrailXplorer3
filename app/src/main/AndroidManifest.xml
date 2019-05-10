@@ -22,7 +22,9 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".RecordActivity"/>
+        <activity android:name=".RecordActivity"
+            android:parentActivityName=".MainActivity">
+        </activity>
     </application>
 
 </manifest>

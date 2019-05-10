@@ -29,6 +29,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.Permission;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 
@@ -42,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView recordText;
     private TextView latUp;
     private TextView longUp;
+    private TextView altUp;
 
     private int MY_PERMISSION_REQUEST_ACCESS_FINE_LOCATION = 1;
     private int MY_PERMISSION_REQUEST_ACCESS_COARSE_LOCATION = 1;
@@ -50,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
 
     private double lat = 0;
     private double lon = 0;
+    private double alt = 0;
 
     private long pauseOffset;
     private boolean running = false;
@@ -57,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
     Boolean permissionExternalStorage;
 
     private ArrayList<Location> trackPoints = new ArrayList<>();
+    private ArrayList<Integer> speedThroughTime = new ArrayList<>();
 
     String directoryName = "GPStracks";
     String fileName;
@@ -64,7 +68,12 @@ public class MainActivity extends AppCompatActivity {
     File dir;
     File file;
     double totatDistance;
-    double altitude;
+    double maxAltitude;
+    double minAltitude;
+    long startTime;
+    long endTime;
+    long totalTimeSecond;
+    double averageSpeedKH;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,12 +81,15 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         gpxHelper = new GPXHelper(this);
-        fileName = Calendar.getInstance().getTime().toString();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String text = sdf.format(Calendar.getInstance().getTime());
+        fileName = text;
 
         chronometer = findViewById(R.id.chronometer);
         recordText = findViewById(R.id.txtRecord);
         latUp = findViewById(R.id.latitudeUpdate);
         longUp = findViewById(R.id.longitudeUpdate);
+        altUp = findViewById(R.id.altitudeUpdate);
 
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
@@ -98,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
                 else
                 {
                     gpxHelper.closeFile(file);
-                    totatDistance = getDistance(trackPoints);
+                    totatDistance = getDistanceAndTime(trackPoints);
                     intoRecordActivity();
                 }
             }
@@ -120,29 +132,55 @@ public class MainActivity extends AppCompatActivity {
         pauseOffset = SystemClock.elapsedRealtime() - chronometer.getBase();
         running = false;
         String dst = String.valueOf(totatDistance);
-        String alt = String.valueOf(altitude);
         String chrono = (String) chronometer.getText();
+        double elapsedSeconds = (SystemClock.elapsedRealtime() - chronometer.getBase()) * 0.001;
+        int j = (int) elapsedSeconds;
+        alt = Math.floor(alt * 100) / 100;
+        averageSpeedKH = Math.floor(((totatDistance/elapsedSeconds) * 3.6) * 100) / 100;
+        String averageSpd = String.valueOf(averageSpeedKH);
+        speedThroughTime = speedThroughTravel(trackPoints);
+        Toast.makeText(this, "Time taken: " + j + "seconds", Toast.LENGTH_SHORT).show();
         Intent intent = new Intent(this, RecordActivity.class);
         intent.putExtra("Altitude", alt);
         intent.putExtra("Chronometer", chrono);
         intent.putExtra("Distance", dst);
+        intent.putExtra("Average Speed", averageSpd);
+        intent.putExtra("Speed Through Time", speedThroughTime);
         startActivity(intent);
     }
 
-    public double getDistance(ArrayList<Location> trackpoints)
+    public double getDistanceAndTime(ArrayList<Location> trackpoints)
     {
         double total = 0;
         for(int i = 0; i < trackpoints.size() - 1; i++)
         {
             Location loc1 = trackpoints.get(i);
             Location loc2 = trackpoints.get(i + 1);
-            total += distanceTwoPoints(loc1.getLatitude(), loc2.getLatitude(), loc1.getLongitude(), loc2.getLongitude());
-            altitude = Math.max(loc1.getAltitude(), loc2.getAltitude());
+            total += distanceBetweenTwoPoints(loc1.getLatitude(), loc2.getLatitude(), loc1.getLongitude(), loc2.getLongitude());
+            maxAltitude = Math.max(loc1.getAltitude(), loc2.getAltitude());
         }
         return total;
     }
 
-    public double distanceTwoPoints(double lat1, double lat2, double lon1, double lon2)
+    public ArrayList<Integer> speedThroughTravel(ArrayList<Location> trackpoints)
+    {
+        //Might be able to include this method in getDistanceAndTime
+        ArrayList<Integer> speed = new ArrayList<>();
+        for(int i = 0; i < trackpoints.size() - 1; i++)
+        {
+            Location loc1 = trackpoints.get(i);
+            Location loc2 = trackpoints.get(i + 1);
+            double dst = distanceBetweenTwoPoints(loc1.getLatitude(), loc2.getLatitude(), loc1.getLongitude(), loc2.getLongitude());
+            int spd = (int)(((dst / 5) * 3.6 ) * 100) / 100;
+            speed.add(spd);
+            //Call distance two points
+            //Divide the distance by 5 seconds ->speed in m/s
+            //Convert to km/h
+        }
+        return speed;
+    }
+
+    public double distanceBetweenTwoPoints(double lat1, double lat2, double lon1, double lon2)
     {
         double earthRadius = 3958.75;
         double distanceLat = Math.toRadians(lat2 - lat1);
@@ -184,6 +222,7 @@ public class MainActivity extends AppCompatActivity {
                     lon = location.getLongitude();
                     latUp.setText("Current Latitude: " + location.getLatitude());
                     longUp.setText("Current Longitude: " + location.getLongitude());
+                    altUp.setText("Current Altitude: " + location.getAltitude());
                 }
             }
 
