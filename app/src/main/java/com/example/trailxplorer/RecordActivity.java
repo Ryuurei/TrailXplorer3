@@ -27,15 +27,18 @@ public class RecordActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.record_main);
 
+        //Get every TextView in record_main
         altitudeTxt = findViewById(R.id.record_max_altitude);
         chronoTxt = findViewById(R.id.record_chronometer);
         distanceTxt = findViewById(R.id.distance);
         averageSpeedTxt = findViewById(R.id.AverageSpeed);
         speedTxt = findViewById(R.id.speed);
 
+        //Add a title to the activity and enable the Home Button
         getSupportActionBar().setTitle("Trail Analytics");
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
+        //Get all details about the traveler's journey
         Intent i = getIntent();
         alt = i.getDoubleExtra("Altitude", 0);
         chronometer = i.getStringExtra("Chronometer");
@@ -43,7 +46,8 @@ public class RecordActivity extends AppCompatActivity {
         averageSpeed = i.getStringExtra("Average Speed");
         speed = i.getIntegerArrayListExtra("Speed Through Time");
 
-        altitudeTxt.setText("Max Altitude: " + String.valueOf(alt) + " in WGS 84 reference ellipsoid");
+        //Put the details on the screen
+        altitudeTxt.setText("Max Altitude: " + alt + " in WGS 84 reference ellipsoid");
         chronoTxt.setText("Time taken: " + chronometer);
         distanceTxt.setText("Distance travelled: " + distance + " m");
         averageSpeedTxt.setText("Average Speed: " + averageSpeed + " k/h");
@@ -53,14 +57,14 @@ public class RecordActivity extends AppCompatActivity {
             String s = "";
             for(int j = 0; j < speed.size() - 1; j++)
             {
-                s += "Speed " + j + ": " + speed.get(j) + " in k/h\n";
+                s += "Speed " + j + ": " + speed.get(j) + " k/h\n";
             }
-            s += "Speed " + (speed.size() - 1) + ": " + speed.get(speed.size() - 1);
+            s += "Speed " + (speed.size() - 1) + ": " + speed.get(speed.size() - 1) + " k/h";
             speedTxt.setText(s);
         }
         else
         {
-            speedTxt.setText("Go outside you fucking idiot");
+            speedTxt.setText("No speed to speak of");
         }
     }
 }

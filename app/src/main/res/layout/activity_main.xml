@@ -35,28 +35,4 @@
         android:textSize="30dp"
         android:layout_marginBottom="15dp" />
 
-    <TextView
-        android:text="Current Latitude: "
-        android:id="@+id/latitudeUpdate"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="15dp"
-        android:layout_marginBottom="15dp" />
-
-    <TextView
-        android:text="Current Longitude: "
-        android:id="@+id/longitudeUpdate"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="15dp"
-        android:layout_marginBottom="10dp" />
-
-    <TextView
-        android:text="Current Altitude: "
-        android:id="@+id/altitudeUpdate"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="15dp"
-        android:layout_marginBottom="10dp" />
-
 </LinearLayout>

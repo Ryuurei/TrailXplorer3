@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
+//This class exists for the sole purpose of creating a .gpx file and writing in it
 public class GPXHelper extends AppCompatActivity{
 
     Context context;
@@ -49,28 +50,21 @@ public class GPXHelper extends AppCompatActivity{
        this.context = context;
     }
 
+    //Create a new directoy called "GPStracks" in the external directory
+    //if it does not exists to store .gpx files in it
+    //The file is accessible to anyone
     public File newDirectory(String directoryName)
     {
         String gpsFolder = directoryName;
         File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), gpsFolder);
         if(!file.exists())
         {
-            if(file.mkdirs())
-            {
-                Toast.makeText(context, "Directory created", Toast.LENGTH_SHORT).show();
-            }
-            else
-            {
-                Toast.makeText(context, "Directory cannot be created", Toast.LENGTH_SHORT).show();
-            }
-        }
-        else
-        {
-            Toast.makeText(context, file.getAbsolutePath(), Toast.LENGTH_SHORT).show();
+            file.mkdirs();
         }
         return file;
     }
 
+    //Create a new .gpx file with the appropriate name, header etc.
     public File newFile(File f, String fileName)
     {
         try {
@@ -79,10 +73,6 @@ public class GPXHelper extends AppCompatActivity{
                     "http://www.topografix.com/GPX/1/1/gpx.xsd\"><trk>\n";
             String name = "<name>" + "TrackPoints" + "</name><trkseg>\n";
             File gpxFile = new File(f, fileName + ".gpx");
-            if(gpxFile.exists())
-            {
-                Toast.makeText(context, "I don't know what to think about this", Toast.LENGTH_SHORT).show();
-            }
             FileWriter writer = new FileWriter(gpxFile, true);
             writer.append(header);
             writer.append(name);
@@ -95,6 +85,7 @@ public class GPXHelper extends AppCompatActivity{
         }
     }
 
+    //Add a trackpoint to the .gpx file with its latitude, longitude, altitude and time
     public void writeInFile(File f, Location l)
     {
         try {
@@ -109,6 +100,7 @@ public class GPXHelper extends AppCompatActivity{
         }
     }
 
+    //Close the file by writing the necessary things at the end.
     public void closeFile(File f)
     {
         try {

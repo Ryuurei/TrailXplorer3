@@ -1,34 +1,22 @@
 package com.example.trailxplorer;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.os.Environment;
 import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Chronometer;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.security.Permission;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -41,18 +29,11 @@ public class MainActivity extends AppCompatActivity {
 
     private Button recordButton;
     private TextView recordText;
-    private TextView latUp;
-    private TextView longUp;
-    private TextView altUp;
 
     private int MY_PERMISSION_REQUEST_ACCESS_FINE_LOCATION = 1;
     private int MY_PERMISSION_REQUEST_ACCESS_COARSE_LOCATION = 1;
     private int MY_PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE = 1;
     private int MY_PERMISSION_REQUEST_READ_EXTERNAL_STORAGE = 1;
-
-    private double lat = 0;
-    private double lon = 0;
-    private double alt = 0;
 
     private long pauseOffset;
     private boolean running = false;
@@ -68,11 +49,7 @@ public class MainActivity extends AppCompatActivity {
     File dir;
     File file;
     double totatDistance;
-    double maxAltitude;
-    double minAltitude;
-    long startTime;
-    long endTime;
-    long totalTimeSecond;
+    double maxAltitude = 0;
     double averageSpeedKH;
 
     @Override
@@ -87,9 +64,6 @@ public class MainActivity extends AppCompatActivity {
 
         chronometer = findViewById(R.id.chronometer);
         recordText = findViewById(R.id.txtRecord);
-        latUp = findViewById(R.id.latitudeUpdate);
-        longUp = findViewById(R.id.longitudeUpdate);
-        altUp = findViewById(R.id.altitudeUpdate);
 
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
@@ -103,20 +77,27 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 if(!running)
                 {
+                    //Start the traveler's journey by starting the chronometer,
+                    //create a new folder called "GPStracks" if it does not exists,
+                    //and create a new .gpx file with the current date and time as title
                     startChronometer();
                     dir = gpxHelper.newDirectory(directoryName);
                     file = gpxHelper.newFile(dir, fileName);
                 }
                 else
                 {
+                    //Ends the traveler's journey by stopping the chronometer
+                    //write the end of the .gpx file created before
+                    //and gather every necessary detail about the traveler's journey
                     gpxHelper.closeFile(file);
-                    totatDistance = getDistanceAndTime(trackPoints);
+                    totatDistance = getDistanceSpeedThroughTimeMaxAltitude(trackPoints);
                     intoRecordActivity();
                 }
             }
         });
     }
 
+    //Run the chronometer
     public void startChronometer()
     {
         recordText.setText("Recording your journey!");
@@ -125,23 +106,28 @@ public class MainActivity extends AppCompatActivity {
         running = true;
     }
 
+    /*Upon end of recording, gather every details of the trail
+    And give them to the RecordActivity*/
     public void intoRecordActivity()
     {
+        //Stops the chronometer
         recordText.setText("");
         chronometer.stop();
         pauseOffset = SystemClock.elapsedRealtime() - chronometer.getBase();
         running = false;
+
+        //Get every details of the journey
         String dst = String.valueOf(totatDistance);
         String chrono = (String) chronometer.getText();
         double elapsedSeconds = (SystemClock.elapsedRealtime() - chronometer.getBase()) * 0.001;
         int j = (int) elapsedSeconds;
-        alt = Math.floor(alt * 100) / 100;
+        maxAltitude = Math.floor(maxAltitude * 100) / 100;
         averageSpeedKH = Math.floor(((totatDistance/elapsedSeconds) * 3.6) * 100) / 100;
         String averageSpd = String.valueOf(averageSpeedKH);
-        speedThroughTime = speedThroughTravel(trackPoints);
-        Toast.makeText(this, "Time taken: " + j + "seconds", Toast.LENGTH_SHORT).show();
+
+        //Start the RecordActivity and send the journey's details to it
         Intent intent = new Intent(this, RecordActivity.class);
-        intent.putExtra("Altitude", alt);
+        intent.putExtra("Altitude", maxAltitude);
         intent.putExtra("Chronometer", chrono);
         intent.putExtra("Distance", dst);
         intent.putExtra("Average Speed", averageSpd);
@@ -149,37 +135,30 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    public double getDistanceAndTime(ArrayList<Location> trackpoints)
+    /*Calculate the distance traveled
+    Compare the trackpoints' altitude and get the maximum altitude
+    Calculate the speed of the traveler between two points and create an array of them
+    This array is used to create the graph of the traveler's speed throughout his journey*/
+    public double getDistanceSpeedThroughTimeMaxAltitude(ArrayList<Location> trackpoints)
     {
+        ArrayList<Integer> speedTime = new ArrayList<>();
         double total = 0;
         for(int i = 0; i < trackpoints.size() - 1; i++)
         {
             Location loc1 = trackpoints.get(i);
             Location loc2 = trackpoints.get(i + 1);
-            total += distanceBetweenTwoPoints(loc1.getLatitude(), loc2.getLatitude(), loc1.getLongitude(), loc2.getLongitude());
-            maxAltitude = Math.max(loc1.getAltitude(), loc2.getAltitude());
+            double dst = distanceBetweenTwoPoints(loc1.getLatitude(), loc2.getLatitude(), loc1.getLongitude(), loc2.getLongitude());
+            total += dst;
+            int spd = (int)(((dst / 5) * 3.6 ) * 100) / 100;
+            speedTime.add(spd);
+            maxAltitude = Math.max(maxAltitude, loc1.getAltitude());
+            maxAltitude = Math.max(maxAltitude, loc2.getAltitude());
         }
+        speedThroughTime = speedTime;
         return total;
     }
 
-    public ArrayList<Integer> speedThroughTravel(ArrayList<Location> trackpoints)
-    {
-        //Might be able to include this method in getDistanceAndTime
-        ArrayList<Integer> speed = new ArrayList<>();
-        for(int i = 0; i < trackpoints.size() - 1; i++)
-        {
-            Location loc1 = trackpoints.get(i);
-            Location loc2 = trackpoints.get(i + 1);
-            double dst = distanceBetweenTwoPoints(loc1.getLatitude(), loc2.getLatitude(), loc1.getLongitude(), loc2.getLongitude());
-            int spd = (int)(((dst / 5) * 3.6 ) * 100) / 100;
-            speed.add(spd);
-            //Call distance two points
-            //Divide the distance by 5 seconds ->speed in m/s
-            //Convert to km/h
-        }
-        return speed;
-    }
-
+    //Calculate the distance between two given Locations by using formulas
     public double distanceBetweenTwoPoints(double lat1, double lat2, double lon1, double lon2)
     {
         double earthRadius = 3958.75;
@@ -193,8 +172,11 @@ public class MainActivity extends AppCompatActivity {
         return (int) (distance * meterConversion);
     }
 
+    //Method used to get the current Location of the traveler
+    //Taken from "Android by Example"
     private void addLocationListener() {
 
+        //Ask the permission to use the GPS
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
@@ -213,25 +195,26 @@ public class MainActivity extends AppCompatActivity {
         }
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, new LocationListener() {
             @Override
+            //The app will get the current Location of the traveler every 5 seconds
+            //Each time the app gets a Location, it will add it to an ArrayList and write it in the .gpx file
+            //The app starts getting Location once the journey has begun
             public void onLocationChanged(Location location) {
                 if(running)
                 {
                     trackPoints.add(location);
                     gpxHelper.writeInFile(file, location);
-                    lat = location.getLatitude();
-                    lon = location.getLongitude();
-                    latUp.setText("Current Latitude: " + location.getLatitude());
-                    longUp.setText("Current Longitude: " + location.getLongitude());
-                    altUp.setText("Current Altitude: " + location.getAltitude());
                 }
             }
 
             @Override
+            //Nothing to do here
             public void onStatusChanged(String provider, int status, Bundle extras) {
 
             }
 
             @Override
+            //When the GPS is enabled, this is called
+            //Does the same thing as in onLocationChanged
             public void onProviderEnabled(String provider) {
                 if (provider == LocationManager.GPS_PROVIDER) {
                     if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
@@ -252,31 +235,33 @@ public class MainActivity extends AppCompatActivity {
                         {
                             trackPoints.add(l);
                             gpxHelper.writeInFile(file, l);
-                            lat = l.getLatitude();
-                            lon = l.getLongitude();
-                            latUp.setText("Current Latitude: " + l.getLatitude());
-                            longUp.setText("Current Longitude: " + l.getLongitude());
                         }
                     }
                 }
             }
 
             @Override
+            //When the GPS is disabled, this is called
+            //It adds a Location with no longitude, latitude, altitude and time
             public void onProviderDisabled(String provider) {
                 if(provider == LocationManager.GPS_PROVIDER)
                 {
                     if(running)
                     {
-                        lat = 0.0;
-                        lon = 0.0;
-                        latUp.setText("Current Latitude: N/A");
-                        longUp.setText("Current Longitude: N/A");
+                        Location location = new Location("");
+                        location.setAltitude(0);
+                        location.setLatitude(0);
+                        location.setLongitude(0);
+                        location.setTime(0);
+                        trackPoints.add(location);
+                        gpxHelper.writeInFile(file, location);
                     }
                 }
             }
         });
     }
 
+    //Ask for permission to write in the external storage
     public void permissionExternalStorage()
     {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
